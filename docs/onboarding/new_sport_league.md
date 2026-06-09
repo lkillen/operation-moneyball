@@ -3,19 +3,19 @@
 Checklist for adding a new sport/league to the pipeline.
 The pipeline handles it automatically — this is the surrounding work.
 
-## Analytics (collaborator)
+## Analytics
 
 - [ ] Create `egress/sport/league/` folder
 - [ ] Push first dataset files to `egress/sport/league/season/`
 
-## Pipeline (Logan)
+## Pipeline
 
 - [ ] Write schema TOML contracts for each new dataset at `schema/sport/league/dataset_name.toml`
 - [ ] Decide write mode and primary keys per dataset with collaborator
 - [ ] Add transform logic in `transform/json_shaper.py` for Gold JSON shape per dataset
 - [ ] Confirm Gold JSON shape with collaborator — what does the web page need to display
 
-## Web (Logan)
+## Web
 
 - [ ] Add Flask routes at `routes/sport/league/`
 - [ ] Add Jinja templates at `templates/sport/league/`
