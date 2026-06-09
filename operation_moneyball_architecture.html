@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operation Moneyball — Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'IBM Plex Sans', sans-serif; background: #0a0e1a; color: #e2e8f0; padding: 40px; min-height: 100vh; }
+  h1 { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
+  .subtitle { font-size: 22px; font-weight: 600; color: #f1f5f9; margin-bottom: 8px; letter-spacing: -0.02em; }
+  .version { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #334155; margin-bottom: 32px; }
+  .legend { display: flex; gap: 24px; margin-bottom: 16px; padding: 14px 20px; background: #111827; border: 1px solid #1e293b; border-radius: 8px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #94a3b8; font-family: 'IBM Plex Mono', monospace; }
+  .legend-line { width: 32px; height: 2px; border-radius: 1px; }
+  .legend-line.data { background: #10b981; }
+  .legend-line.event { background: #a78bfa; }
+  .legend-line.notif { background: none; border-top: 2px dashed #818cf8; }
+  .legend-line.deploy { background: none; border-top: 2px dashed #10b981; }
+  .legend-line.internal { background: none; border-top: 2px dashed #3b82f6; }
+  .medallion-key { display: flex; gap: 16px; padding: 10px 16px; background: #0f172a; border: 1px solid #1e293b; border-radius: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .mk-item { display: flex; align-items: center; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+  .mk-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .mk-bronze { background: rgba(251,191,36,0.3); border: 1px solid #f59e0b; }
+  .mk-silver { background: rgba(148,163,184,0.2); border: 1px solid #94a3b8; }
+  .mk-gold { background: rgba(245,158,11,0.2); border: 1px solid #f59e0b; }
+  .mk-bronze-t { color: #fbbf24; } .mk-silver-t { color: #94a3b8; } .mk-gold-t { color: #f59e0b; }
+  .journey { padding: 20px 24px; background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; margin-bottom: 32px; }
+  .journey-title { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: #334155; margin-bottom: 16px; }
+  .journey-flow { display: flex; align-items: center; gap: 0; flex-wrap: wrap; row-gap: 12px; }
+  .jf-step { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .jf-pill { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; padding: 6px 12px; border-radius: 6px; white-space: nowrap; }
+  .jf-repo { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #334155; white-space: nowrap; }
+  .jf-bronze { background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.35); }
+  .jf-silver { background: rgba(148,163,184,0.1); color: #94a3b8; border: 1px solid rgba(148,163,184,0.3); }
+  .jf-gold { background: rgba(245,158,11,0.1); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+  .jf-neutral { background: rgba(99,102,241,0.1); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3); }
+  .jf-r2 { background: rgba(249,115,22,0.1); color: #fb923c; border: 1px solid rgba(249,115,22,0.3); }
+  .jf-arrow { font-size: 14px; color: #1D9E75; padding: 0 6px; padding-bottom: 14px; flex-shrink: 0; }
+  .jf-divider { width: 1px; height: 40px; background: #1e293b; margin: 0 16px; align-self: center; padding-bottom: 14px; }
+  .jf-abort { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #ef4444; }
+  .repos { display: flex; flex-direction: column; gap: 16px; }
+  .repo { border-radius: 12px; padding: 20px 24px; }
+  .repo-overview { border: 1px dashed #334155; background: #0f172a; }
+  .repo-analytics { border: 1px solid #92400e; background: rgba(120,53,15,0.12); }
+  .repo-pipeline { border: 1px solid #1e40af; background: rgba(30,58,138,0.12); }
+  .repo-storage { border: 1px solid #065f46; background: rgba(6,78,59,0.12); }
+  .repo-notifications { border: 1px solid #6d28d9; background: rgba(109,40,217,0.1); }
+  .repo-web { border: 1px solid #7f1d1d; background: rgba(127,29,29,0.1); }
+  .repo-name { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; letter-spacing: 0.05em; margin-bottom: 3px; }
+  .repo-overview .repo-name { color: #64748b; }
+  .repo-analytics .repo-name { color: #fbbf24; }
+  .repo-pipeline .repo-name { color: #60a5fa; }
+  .repo-storage .repo-name { color: #34d399; }
+  .repo-notifications .repo-name { color: #a78bfa; }
+  .repo-web .repo-name { color: #f87171; }
+  .repo-desc { font-size: 12px; color: #475569; margin-bottom: 16px; font-family: 'IBM Plex Mono', monospace; line-height: 1.6; }
+  .node-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+  .node-row:last-child { margin-bottom: 0; }
+  .node { border-radius: 8px; padding: 10px 14px; flex: 1; min-width: 140px; }
+  .node.full-width { flex: none; width: 100%; min-width: unset; }
+  .node.wide { flex: 2; }
+  .node-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+  .node-sub { font-size: 11px; opacity: 0.7; font-family: 'IBM Plex Mono', monospace; line-height: 1.5; }
+  .n-amber { background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3); }
+  .n-amber .node-title { color: #fbbf24; } .n-amber .node-sub { color: #d97706; }
+  .n-gray { background: rgba(148,163,184,0.08); border: 1px solid rgba(148,163,184,0.2); }
+  .n-gray .node-title { color: #cbd5e1; } .n-gray .node-sub { color: #64748b; }
+  .n-blue { background: rgba(96,165,250,0.08); border: 1px solid rgba(96,165,250,0.25); }
+  .n-blue .node-title { color: #93c5fd; } .n-blue .node-sub { color: #3b82f6; }
+  .n-teal { background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.25); }
+  .n-teal .node-title { color: #6ee7b7; } .n-teal .node-sub { color: #10b981; }
+  .n-purple { background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.25); }
+  .n-purple .node-title { color: #c4b5fd; } .n-purple .node-sub { color: #8b5cf6; }
+  .n-green { background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.25); }
+  .n-green .node-title { color: #86efac; } .n-green .node-sub { color: #22c55e; }
+  .n-coral { background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.25); }
+  .n-coral .node-title { color: #fca5a5; } .n-coral .node-sub { color: #ef4444; }
+  .n-indigo { background: rgba(129,140,248,0.08); border: 1px solid rgba(129,140,248,0.25); }
+  .n-indigo .node-title { color: #a5b4fc; } .n-indigo .node-sub { color: #6366f1; }
+  .n-violet { background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.4); }
+  .n-violet .node-title { color: #a78bfa; } .n-violet .node-sub { color: #7c3aed; }
+  .n-orange { background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.3); }
+  .n-orange .node-title { color: #fb923c; } .n-orange .node-sub { color: #ea580c; }
+  .n-dashed { background: transparent; border: 1px dashed rgba(251,191,36,0.35); }
+  .n-dashed .node-title { color: #d97706; } .n-dashed .node-sub { color: #92400e; }
+  .track-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 6px; padding: 2px 0; }
+  .track-data { color: #f59e0b; border-left: 2px solid #f59e0b; padding-left: 8px; }
+  .track-model { color: #a78bfa; border-left: 2px solid #a78bfa; padding-left: 8px; }
+  .track-egress { color: #fb923c; border-left: 2px solid #fb923c; padding-left: 8px; }
+  .track-pipeline { color: #60a5fa; border-left: 2px solid #60a5fa; padding-left: 8px; }
+  .track-support { color: #34d399; border-left: 2px solid #34d399; padding-left: 8px; }
+  .track-section { margin-bottom: 14px; }
+  .track-section:last-child { margin-bottom: 0; }
+  .secrets-strip { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .secret-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(99,102,241,0.1); border: 1px dashed rgba(99,102,241,0.4); border-radius: 6px; padding: 5px 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #a5b4fc; }
+  .divider { width: 100%; height: 1px; background: #1e293b; margin: 10px 0; }
+  .badge-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; padding: 5px 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+  .badge-purple { background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.3); color: #c4b5fd; }
+  .badge-discord { background: rgba(88,101,242,0.1); border: 1px solid rgba(88,101,242,0.4); color: #818cf8; }
+  .badge-green { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); color: #34d399; }
+  .badge-orange { background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.3); color: #fb923c; }
+  .storage-tree { font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.9; padding: 12px 16px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid #1e293b; }
+  .tree-sport { color: #34d399; font-weight: 600; } .tree-season { color: #6ee7b7; } .tree-folder { color: #60a5fa; font-weight: 600; } .tree-desc { color: #334155; } .tree-table { color: #a78bfa; }
+  .tree-tier { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; } .tree-silver { color: #94a3b8; } .tree-gold { color: #f59e0b; }
+  .tree-indent1 { padding-left: 16px; } .tree-indent2 { padding-left: 32px; } .tree-indent3 { padding-left: 48px; }
+  .between { padding: 2px 0 2px 8px; display: flex; flex-direction: column; gap: 5px; }
+  .flow-row { display: flex; align-items: center; gap: 8px; font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: #475569; }
+  .flow-arrow { display: flex; align-items: center; gap: 4px; }
+  .flow-arrow .line { height: 1.5px; width: 40px; border-radius: 1px; }
+  .flow-arrow .ah { font-size: 10px; }
+  .fa-data .line { background: #10b981; } .fa-data .ah { color: #10b981; }
+  .fa-event .line { background: #a78bfa; } .fa-event .ah { color: #a78bfa; }
+  .fa-deploy .line { background: none; border-top: 1.5px dashed #10b981; } .fa-deploy .ah { color: #10b981; }
+  .fa-internal .line { background: none; border-top: 1px dashed #3b82f6; } .fa-internal .ah { color: #3b82f6; }
+  .fa-notif .line { background: none; border-top: 1.5px dashed #818cf8; } .fa-notif .ah { color: #818cf8; }
+  .fa-r2 .line { background: none; border-top: 1.5px dashed #fb923c; } .fa-r2 .ah { color: #fb923c; }
+  .externals { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .external { border-radius: 8px; padding: 10px 16px; border: 1px dashed; flex: 1; min-width: 160px; }
+  .ext-collab { border-color: rgba(251,191,36,0.4); background: rgba(251,191,36,0.04); }
+  .ext-collab .node-title { color: #fbbf24; } .ext-collab .node-sub { color: #92400e; }
+  .ext-api { border-color: rgba(148,163,184,0.3); background: rgba(148,163,184,0.04); }
+  .ext-api .node-title { color: #cbd5e1; } .ext-api .node-sub { color: #475569; }
+  .ext-discord { border-color: rgba(88,101,242,0.4); background: rgba(88,101,242,0.04); }
+  .ext-discord .node-title { color: #818cf8; } .ext-discord .node-sub { color: #4338ca; }
+</style>
+</head>
+<body>
+
+<h1>Operation Moneyball</h1>
+<div class="subtitle">Target Architecture — In Progress</div>
+<div class="version">Active development · event-driven pipeline · lakehouse pattern · sport / league / table / season · updated 2026-03-22</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-line data"></div>Data flow</div>
+  <div class="legend-item"><div class="legend-line event"></div>Event / dispatch</div>
+  <div class="legend-item"><div class="legend-line notif"></div>Notification</div>
+  <div class="legend-item"><div class="legend-line deploy"></div>Deploy / upload</div>
+  <div class="legend-item"><div class="legend-line internal"></div>Internal / manifest</div>
+</div>
+
+<div class="medallion-key">
+  <div class="mk-item"><div class="mk-dot mk-bronze"></div><span class="mk-bronze-t">Bronze</span> &nbsp;— CSVs as received · unvalidated · egress/ and temp/ (runner-ephemeral)</div>
+  <div class="mk-item"><div class="mk-dot mk-silver"></div><span class="mk-silver-t">Silver</span> &nbsp;— post-DQ validation · parquet · sport/league/table/season/ · moneyball-storage</div>
+  <div class="mk-item"><div class="mk-dot mk-gold"></div><span class="mk-gold-t">Gold</span> &nbsp;&nbsp;&nbsp;— entity-shaped JSON · Cloudflare R2 · Flask fetches on demand · no runtime compute</div>
+</div>
+
+<div class="journey">
+  <div class="journey-title">Data journey — end to end</div>
+  <div class="journey-flow">
+    <div class="jf-step">
+      <div class="jf-pill jf-bronze">egress/</div>
+      <div class="jf-repo">moneyball-analytics</div>
+    </div>
+    <div class="jf-arrow">→</div>
+    <div class="jf-step">
+      <div class="jf-pill jf-bronze">temp/</div>
+      <div class="jf-repo">runner · ephemeral</div>
+    </div>
+    <div class="jf-arrow">→</div>
+    <div class="jf-step">
+      <div class="jf-pill jf-neutral">dispatch.py</div>
+      <div class="jf-repo">scan → per file loop</div>
+    </div>
+    <div class="jf-arrow">→</div>
+    <div class="jf-step">
+      <div class="jf-pill jf-bronze">Ingress</div>
+      <div class="jf-repo">DatasetPacket</div>
+    </div>
+    <div class="jf-arrow">→</div>
+    <div class="jf-step">
+      <div class="jf-pill jf-bronze">Validate + DQ</div>
+      <div class="jf-abort">↓ abort if fail</div>
+    </div>
+    <div class="jf-divider"></div>
+    <div class="jf-step">
+      <div class="jf-pill jf-silver">Transform</div>
+      <div class="jf-repo">TransformPacket</div>
+    </div>
+    <div class="jf-arrow">→</div>
+    <div class="jf-step">
+      <div class="jf-pill jf-silver">Publish</div>
+      <div class="jf-repo">local staging</div>
+    </div>
+    <div class="jf-divider"></div>
+    <div class="jf-step">
+      <div class="jf-pill jf-silver">Silver parquet</div>
+      <div class="jf-repo">moneyball-storage</div>
+    </div>
+    <div class="jf-arrow">→</div>
+    <div class="jf-step">
+      <div class="jf-pill jf-r2">Gold JSON</div>
+      <div class="jf-repo">Cloudflare R2</div>
+    </div>
+    <div class="jf-arrow">→</div>
+    <div class="jf-step">
+      <div class="jf-pill jf-gold">Flask app</div>
+      <div class="jf-repo">moneyball-web</div>
+    </div>
+  </div>
+</div>
+
+<div class="repos">
+
+  <div class="repo repo-overview">
+    <div class="repo-name">operation-moneyball</div>
+    <div class="repo-desc" style="margin-bottom:0;">Overview repo · README · architecture diagrams · ADRs · links to all repos · portfolio entry point<br>Repos: moneyball-analytics · moneyball-pipeline · moneyball-storage · moneyball-notifications · moneyball-web</div>
+  </div>
+
+  <div class="between">
+    <div class="flow-row">
+      <div class="flow-arrow fa-data"><div class="line"></div><div class="ah">▼</div></div>
+      collaborator pushes finished CSVs to egress/sport/league/season/ on main
+    </div>
+    <div class="flow-row">
+      <div class="flow-arrow fa-data"><div class="line"></div><div class="ah">▼</div></div>
+      sports module data ingested by collaborator locally
+    </div>
+  </div>
+
+  <div class="repo repo-analytics">
+    <div class="repo-name">moneyball-analytics</div>
+    <div class="repo-desc">Analytical intelligence · playground · all models and transforms live here · pipeline is a consumer, not a thinker</div>
+
+    <div class="secrets-strip">
+      <div class="secret-badge">🔑 PIPELINE_REPO_TOKEN — fine-grained PAT scoped to moneyball-pipeline · triggers repository_dispatch</div>
+    </div>
+
+    <div class="track-section">
+      <div class="track-label track-data">Track 1 — Data</div>
+      <div class="node-row">
+        <div class="node n-amber">
+          <div class="node-title">data/raw/</div>
+          <div class="node-sub">sports module data · source CSVs<br>unfiltered · local machine only</div>
+        </div>
+        <div class="node n-amber">
+          <div class="node-title">transforms/sport/league/</div>
+          <div class="node-sub">filter · slim · shape · pre-aggregate<br>certified by founder · local · not automated</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="track-section">
+      <div class="track-label track-model">Track 2 — Model outputs</div>
+      <div class="node-row">
+        <div class="node n-purple">
+          <div class="node-title">Founder's models</div>
+          <div class="node-sub">Random Forest · Monte Carlo simulations<br>Elo ratings · prediction scores<br>run locally · output as CSVs to egress/</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="track-section">
+      <div class="track-label track-egress">Egress — Bronze handoff zone</div>
+      <div class="node-row">
+        <div class="node n-amber full-width">
+          <div class="node-title">egress/sport/league/season/</div>
+          <div class="node-sub">contract boundary between analytics and pipeline · push to main triggers generate_manifest.yml · per-file sidecar manifests auto-generated and committed alongside each CSV · repository_dispatch sent to moneyball-pipeline · Bronze — unvalidated by pipeline · append-only, files accumulate intentionally</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="track-section">
+      <div class="track-label track-pipeline">GitHub Actions</div>
+      <div class="node-row">
+        <div class="node n-green full-width">
+          <div class="node-title">generate_manifest.yml</div>
+          <div class="node-sub">trigger: push to main touching egress/ · scans changed files only · for each CSV: calculates SHA-256 checksum, counts rows, records file size · writes dataset_name.manifest.json alongside each CSV · commits back to main · sends repository_dispatch to moneyball-pipeline with sport, league, season payload</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="between">
+    <div class="flow-row">
+      <div class="flow-arrow fa-event"><div class="line"></div><div class="ah">▼</div></div>
+      repository_dispatch event → moneyball-pipeline/pipeline.yml · payload: sport, league, season
+    </div>
+  </div>
+
+  <div class="repo repo-pipeline">
+    <div class="repo-name">moneyball-pipeline</div>
+    <div class="repo-desc">Purely mechanical · zero analytical responsibility · Bronze in, Silver parquet + Gold JSON out · event-driven · single control plane through dispatch.py</div>
+
+    <div class="secrets-strip">
+      <div class="secret-badge">🔑 STORAGE_REPO_TOKEN — fine-grained PAT · read/write moneyball-storage</div>
+      <div class="secret-badge">🔑 CF_R2_TOKEN — Cloudflare R2 API token</div>
+      <div class="secret-badge">🔑 CF_R2_BUCKET_NAME — R2 bucket target</div>
+      <div class="secret-badge">🔑 DISCORD_WEBHOOK_URL — passed to moneyball-notifications</div>
+      <div class="secret-badge">🔑 CACHE_REFRESH_TOKEN — POSTs to Flask /cache/refresh after Gold deploy</div>
+      <div class="secret-badge">🔑 FLASK_BASE_URL — Flask app URL for cache invalidation</div>
+    </div>
+
+    <div class="track-section">
+      <div class="track-label track-pipeline">GitHub Actions — single workflow</div>
+      <div class="node-row">
+        <div class="node n-green full-width">
+          <div class="node-title">pipeline.yml — 6 jobs, one runner, shared state throughout</div>
+          <div class="node-sub">
+            trigger: repository_dispatch from analytics · workflow_dispatch (manual — sport, league, season inputs)<br>
+            Job 1 setup: checkout pipeline · clone analytics egress/ → temp/ (CSVs + sidecar manifests) · clone moneyball-storage · install deps<br>
+            Job 2 run_pipeline: run dispatch.py · per-file loop · ingress → validate → health → transform → publish · outputs RunSummary<br>
+            Job 3 commit_silver: git add/commit/push Silver parquet to moneyball-storage (if ≥1 file passed)<br>
+            Job 4 deploy_gold: upload Gold JSON from gold_staging/ to Cloudflare R2 (if ≥1 file passed)<br>
+            Job 4b invalidate_cache: POST to Flask /cache/refresh with token · clears lru_cache in place · no restart<br>
+            Job 5 write_run_manifest: build + commit run manifest to moneyball-storage/runs/ · last confirmation everything landed<br>
+            Job 6 notify: always fires · calls moneyball-notifications composite action · passes formatted RunSummary message
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="track-section">
+      <div class="track-label track-pipeline">Core pipeline — dispatch is the single control plane</div>
+      <div class="node-row">
+        <div class="node n-blue full-width">
+          <div class="node-title">dispatch.py</div>
+          <div class="node-sub">single control plane · every stage is called by dispatch · every result flows back to dispatch · only dispatch talks to observability<br>flow: ingress.scan() → file list → for each file: ingress.run() → validate.run() → dispatch writes DQ report to health/ → transform.run() → publish.run() → build RunSummary → observability.collect() → return to workflow<br>failure on one file does not block others · partial success is a valid run outcome</div>
+        </div>
+      </div>
+      <div class="node-row">
+        <div class="node n-dashed wide">
+          <div class="node-title">temp/</div>
+          <div class="node-sub">Bronze · runner-ephemeral in production<br>copied fresh from egress/ each run<br>files in repo are dev convenience · no cleanup policy</div>
+        </div>
+        <div class="node n-indigo wide">
+          <div class="node-title">core/</div>
+          <div class="node-sub">DatasetPacket — dataframe + metadata (ingress → validate → transform)<br>TransformPacket — parquet bytes + JSON payload (transform → publish)<br>WriteMode enum · Stage enum · shared contracts · no logic</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="track-section">
+      <div class="track-label track-pipeline">Pipeline stages — per file · called by dispatch</div>
+      <div class="node-row">
+        <div class="node n-blue">
+          <div class="node-title">Ingress</div>
+          <div class="node-sub">scan() → file list from sidecar manifests<br>run(file) → verifies checksum · loads CSV<br>wraps as DatasetPacket · writes Bronze receipt<br>aborts if manifest missing or checksum mismatch</div>
+        </div>
+        <div class="node n-blue">
+          <div class="node-title">Validate</div>
+          <div class="node-sub">Bronze → Silver boundary · loads schema contract<br>populates write_mode, primary_keys, schema_version on packet<br>type coercion · DQ score · tags DatasetPacket<br>returns DQ report in StageResult → dispatch → health/<br>abort if empty · missing col · key null · threshold fail</div>
+        </div>
+      </div>
+      <div class="node-row">
+        <div class="node n-blue">
+          <div class="node-title">Transform</div>
+          <div class="node-sub">DatasetPacket → TransformPacket<br>BATCH / APPEND / UPSERT on primary keys<br>parquet bytes (Silver) + Gold JSON from dataframe in memory<br>gold_validator checks Gold shape before packaging</div>
+        </div>
+        <div class="node n-blue">
+          <div class="node-title">Publish</div>
+          <div class="node-sub">TransformPacket → local filesystem<br>Silver → cloned moneyball-storage/parquet/<br>Gold → gold_staging/ on runner (picked up by Job 4)<br>atomic per file · reports success/failure to dispatch</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="track-section">
+      <div class="track-label track-support">Supporting modules</div>
+      <div class="node-row">
+        <div class="node n-teal">
+          <div class="node-title">Schema</div>
+          <div class="node-sub">silver/ — DQ rules · write mode · primary keys<br>gold/ — required keys · required fields · record floor<br>loader.py: get_dq_rules · get_write_config · get_gold_schema<br>pipeline owns Gold contracts · collaborator owns Silver</div>
+        </div>
+        <div class="node n-teal">
+          <div class="node-title">Health</div>
+          <div class="node-sub">append-only DQ history per file per run<br>receives DQ reports from dispatch after validate<br>pass/fail · DQ score · thresholds at time of run<br>full history retained · feeds observability</div>
+        </div>
+        <div class="node n-teal">
+          <div class="node-title">Manifests</div>
+          <div class="node-sub">builds + writes run manifest to storage/runs/<br>one manifest per run · append only · never overwritten<br>written by Job 5 after deploy_gold · final confirmation</div>
+        </div>
+      </div>
+      <div class="node-row">
+        <div class="node n-purple full-width">
+          <div class="node-title">Observability</div>
+          <div class="node-sub">end-to-end monitor · passive · not in critical path · called only by dispatch via RunSummary<br>watches: stage durations · abort rates · row count trends · file size trends · write mode awareness (batch vs append)<br>silence detection: expected runs that didn't happen · datasets not updated in expected window<br>upstream trigger chain monitoring: detects when analytics pushed but pipeline never ran (egress/ commit newer than last run manifest) · loud failure alert via Discord<br>reads health/ for DQ drift detection · consumer of full run history</div>
+        </div>
+      </div>
+      <div class="node-row">
+        <div class="node n-gray full-width">
+          <div class="node-title">Tests</div>
+          <div class="node-sub">fixtures/sport/league/season/ — dummy CSVs + sidecar manifests · edge cases: empty files, missing cols, null keys, type mismatches<br>unit/ — per module · integration/ — stage interactions end to end · never touches real temp/ or moneyball-storage</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="between">
+    <div class="flow-row">
+      <div class="flow-arrow fa-data"><div class="line"></div><div class="ah">▼</div></div>
+      parquet/sport/league/table/season/ — Silver · validated parquet · recovery layer · git committed
+    </div>
+    <div class="flow-row">
+      <div class="flow-arrow fa-r2"><div class="line"></div><div class="ah">▲</div></div>
+      Gold JSON uploaded to Cloudflare R2 — sport/league/entity.json · after deploy_gold job
+    </div>
+    <div class="flow-row">
+      <div class="flow-arrow fa-internal"><div class="line"></div><div class="ah">▼</div></div>
+      runs/sport/league/season/ — run manifests · DQ scores · append only
+    </div>
+    <div class="flow-row">
+      <div class="flow-arrow fa-notif"><div class="line"></div><div class="ah">→</div></div>
+      moneyball-notifications composite action → Discord #pipeline-alerts
+    </div>
+  </div>
+
+  <div class="repo repo-storage">
+    <div class="repo-name">moneyball-storage</div>
+    <div class="repo-desc">Shared GitHub repo · Silver recovery layer + run manifests · analyst-accessible · do not write manually<br>Gold JSON lives in Cloudflare R2 — not this repo</div>
+    <div class="storage-tree">
+      <div><span class="tree-folder">moneyball-storage/</span></div>
+      <div class="tree-indent1"><span class="tree-folder">parquet/</span> <span class="tree-tier tree-silver">SILVER</span> <span class="tree-desc">— validated parquet · recovery layer · sport/league/table/season/</span></div>
+      <div class="tree-indent2"><span class="tree-sport">basketball/</span><span class="tree-sport">ncaab/</span><span class="tree-table">{table}/</span><span class="tree-season">{season}/</span></div>
+      <div class="tree-indent2"><span class="tree-sport">football/</span><span class="tree-sport">nfl/</span><span class="tree-table">{table}/</span><span class="tree-season">{season}/</span></div>
+      <div class="tree-indent1"><span class="tree-folder">runs/</span> <span class="tree-desc">— run manifests · DQ scores · append only · one file per run</span></div>
+      <div class="tree-indent2"><span class="tree-sport">basketball/</span><span class="tree-sport">ncaab/</span><span class="tree-season">{season}/</span> <span class="tree-desc">·</span> <span class="tree-sport">football/</span><span class="tree-sport">nfl/</span><span class="tree-season">{season}/</span></div>
+      <div class="tree-indent1" style="color:#334155; font-style:italic;">— Gold JSON is in Cloudflare R2, not here —</div>
+    </div>
+  </div>
+
+  <div class="between">
+    <div class="flow-row">
+      <div class="flow-arrow fa-r2"><div class="line"></div><div class="ah">▼</div></div>
+      Flask fetches Gold JSON from Cloudflare R2 on first request per entity · @lru_cache
+    </div>
+    <div class="flow-row">
+      <div class="flow-arrow fa-internal"><div class="line"></div><div class="ah">▼</div></div>
+      POST /cache/refresh from pipeline.yml Job 4b · cache cleared in place · no restart
+    </div>
+  </div>
+
+  <div class="repo repo-notifications">
+    <div class="repo-name">moneyball-notifications</div>
+    <div class="repo-desc">Standalone notification module · implemented as a composite GitHub Action · any repo calls it with uses: · not just pipeline — analytics, polling scripts, any workflow in the system</div>
+    <div class="node-row">
+      <div class="node n-violet full-width">
+        <div class="node-title">discord/ — composite GitHub Action</div>
+        <div class="node-sub">action.yml — defines inputs: message (string), webhook_url · any workflow calls via `uses: repo/moneyball-notifications/discord@main`<br>formatter.py — wraps incoming message string in Discord payload structure<br>sender.py — POSTs to Discord webhook URL · URL always passed as input secret · never hardcoded<br>calling workflow builds the message · this module just formats and sends</div>
+      </div>
+    </div>
+    <div class="badge-row">
+      <div class="badge badge-discord">💬 Discord #pipeline-alerts</div>
+      <div class="badge badge-purple">callable by: pipeline · analytics · future polling workflows</div>
+      <div class="badge badge-green">always fires: success · failure · partial</div>
+    </div>
+  </div>
+
+  <div class="repo repo-web">
+    <div class="repo-name">moneyball-web</div>
+    <div class="repo-desc">Flask + Gunicorn · Oracle Cloud Compute (ARM) + Cloudflare CDN · visual proof the pipeline works · no DB · no runtime compute · data engineering is the product</div>
+
+    <div class="secrets-strip">
+      <div class="secret-badge">🔑 CF_R2_BASE_URL — Cloudflare R2 public base URL · read from env var</div>
+      <div class="secret-badge">🔑 CACHE_REFRESH_TOKEN — validates POST /cache/refresh from pipeline</div>
+      <div class="secret-badge">🔑 ORACLE_SSH_KEY — GitHub Actions deploys via SSH on push to main</div>
+    </div>
+
+    <div class="node-row">
+      <div class="node n-coral">
+        <div class="node-title">Flask app</div>
+        <div class="node-sub">routes/sport/league/ · templates/sport/league/<br>loader.py: load_json(sport, league, entity) · fetches from R2<br>@lru_cache per (sport, league, entity) · cleared by pipeline<br>/cache/refresh endpoint · protected by token · no restart needed</div>
+      </div>
+      <div class="node n-coral">
+        <div class="node-title">Gunicorn + nginx</div>
+        <div class="node-sub">WSGI server · 2 workers<br>nginx reverse proxy · never exposed directly<br>systemd service · auto-restarts on crash</div>
+      </div>
+      <div class="node n-orange">
+        <div class="node-title">Oracle Cloud + Cloudflare</div>
+        <div class="node-sub">ARM Ampere A1 · always free · 24GB RAM<br>Cloudflare proxy · SSL · DDoS protection<br>Oracle IP never exposed · CDN for static assets<br>deploy: SSH git pull + systemd restart on push to main</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
