@@ -19,15 +19,19 @@ The pipeline relies on GitHub Actions to trigger across repos. Both the data tea
 7. Click "Generate token"
 8. **Copy the token immediately** — you won't see it again
 
-### 2. Add Token to Your Repo
+### 2. Add Your Token to Both Repos
 
-**Logan (pipeline maintainer):**
-- Go to moneyball-pipeline → Settings → Secrets and variables → Actions
-- New secret → Name: `STORAGE_REPO_TOKEN` → Paste token → Save
+Each person adds their PAT to **both** repos (so either person can trigger the pipeline):
 
-**Collaborator (analytics maintainer):**
-- Go to moneyball-analytics → Settings → Secrets and variables → Actions
-- New secret → Name: `PIPELINE_REPO_TOKEN` → Paste token → Save
+**In moneyball-pipeline:**
+- Settings → Secrets and variables → Actions → New secret
+- Name: `STORAGE_REPO_TOKEN` → Paste your token → Save
+
+**In moneyball-analytics:**
+- Settings → Secrets and variables → Actions → New secret
+- Name: `PIPELINE_REPO_TOKEN` → Paste your token → Save
+
+**Repeat for Logan and Collaborator**
 
 ### 3. Test the Flow
 
@@ -42,13 +46,13 @@ Or manually in moneyball-pipeline:
 
 ## Secrets Reference
 
-| Secret | Repo | Purpose | Who |
-|---|---|---|---|
-| `STORAGE_REPO_TOKEN` | moneyball-pipeline | Clone/push to moneyball-storage | Logan |
-| `PIPELINE_REPO_TOKEN` | moneyball-analytics | Trigger moneyball-pipeline | Collaborator |
-| `DISCORD_WEBHOOK_URL` | moneyball-pipeline | (optional) Discord notifications | Logan |
-| `CACHE_REFRESH_TOKEN` | moneyball-pipeline | (optional) Flask cache refresh | Logan |
-| `FLASK_BASE_URL` | moneyball-pipeline | (optional) Web app URL | Logan |
+| Secret | Repo | Purpose |
+|---|---|---|
+| `STORAGE_REPO_TOKEN` | moneyball-pipeline | Clone/push to moneyball-storage (both have PAT) |
+| `PIPELINE_REPO_TOKEN` | moneyball-analytics | Trigger moneyball-pipeline (both have PAT) |
+| `DISCORD_WEBHOOK_URL` | moneyball-pipeline | (optional) Discord notifications |
+| `CACHE_REFRESH_TOKEN` | moneyball-pipeline | (optional) Flask cache refresh |
+| `FLASK_BASE_URL` | moneyball-pipeline | (optional) Web app URL |
 
 ## Troubleshooting
 
