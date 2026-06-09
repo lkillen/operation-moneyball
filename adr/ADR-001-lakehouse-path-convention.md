@@ -26,7 +26,7 @@ Season is the partition — surgical recovery and reprocessing without touching 
 ## Alternatives considered
 - `sport/season/` — too flat, no table-level isolation
 - `league/season/` — loses sport grouping, harder to reason about cross-league queries
-- Hive-style `season=2025/` — compatible with Athena/Spark auto-discovery but ugly and unnecessary for a GitHub-based store
+- Hive-style `season=2025/` — compatible with Athena/Spark auto-discovery
 
 ## Consequences
 - Adding a new sport or league is a new folder, not a code change
