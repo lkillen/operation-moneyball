@@ -42,7 +42,7 @@ A data engineering portfolio project. The pipeline is the product.
 
 See [`docs/architecture/folder_structure.md`](docs/architecture/folder_structure.md) for the full path convention and data journey.
 
-See [`operation_moneyball_architecture.html`](operation_moneyball_architecture.html) for the system diagram.
+See [`View Planned Architecture`](https://lkillen.github.io/operation-moneyball/operation_moneyball_architecture.html).
 
 ## Current sports
 
