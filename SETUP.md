@@ -12,7 +12,7 @@ The pipeline relies on GitHub Actions to trigger across repos. Both the data tea
 2. Click "Generate new token"
 3. Name: `moneyball-automation` (or similar)
 4. Expiration: 90 days (or your preference)
-5. Repository access: Select `All repositories` (or just moneyball-* repos)
+5. Repository access: Select moneyball-* repos
 6. Permissions:
    - Repository → Contents: Read and write
    - Repository → Actions: Read and write
